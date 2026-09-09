@@ -1,19 +1,17 @@
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import UserList from './components/UserList'
+import UserDetail from './components/UserDetail'
 
 function App() {
   return (
-    <div className="min-h-svh mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-ink-900">
-          Users
-        </h1>
-
-      </header>
-
-      <main className="overflow-hidden rounded-lg border border-ink-300 bg-white">
-        <UserList />
-      </main>
-    </div>
+    <BrowserRouter>
+      <div className="min-h-svh mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+        <Routes>
+          <Route path="/" element={<UserList />} />
+          <Route path="/users/:id" element={<UserDetail />} />
+        </Routes>
+      </div>
+    </BrowserRouter>
   )
 }
 
