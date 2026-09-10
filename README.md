@@ -1,6 +1,6 @@
 # User Management — M-One Frontend Challenge
 
-> Level applying for: **[fill in — e.g. Mid-level Frontend Developer]**
+> Level applying for: **Mid-level Frontend Developer**
 
 A user directory built against the JSONPlaceholder `/users` fixture: search,
 sort, filter, a detail view per user, and a name edit that survives a reload.
@@ -30,30 +30,13 @@ always available.
 ## Decisions
 
 **Local edits vs. fresh server data — local wins.**
-The fixture has no real write endpoint, so a name edit only exists because
-it happened here; a fresh fetch can never be "more current" than it for the
-fields we edit. Edits are persisted in IndexedDB (`hooks/useUserEdits.ts`),
+The fixture has no real write endpoint. Edits are persisted in IndexedDB,
 keyed by user id, and merged on top of every fetch inside `hooks/useUsers.ts`.
-The merge happens *before* search/sort/filter ever see the data, so those
-operate on the edited name, not the stale original — a direct consequence
-of the "local wins" decision rather than a separate choice.
 
 **Why IndexedDB over `localStorage`.**
 Reads/writes are async and don't block the main thread, edits are stored as
 keyed records instead of one JSON blob that has to be fully parsed on every
 read, and it scales cleanly if the amount of persisted state grows later.
-
-**Race safety.**
-`useUsers` tracks in-flight requests with a request-id ref plus an
-`AbortController`. If a newer fetch starts (a retry, for example) before an
-older one resolves, the older response is dropped instead of being allowed
-to overwrite newer state. Search, sort, and city filtering, however, run
-entirely client-side over the already-fetched array — the fixture has no
-server-side search/sort/filter parameters — so typing in the search box
-never actually issues a request, so there is no race to lose. See Contradictions
-below; the guard is real, but it protects the one genuine network op (the
-initial fetch and manual retries), not the search box the brief's wording
-suggests it should.
 
 **File architecture: flat, by type, not by feature.**
 `api/` (fetch + response shape), `hooks/` (data fetching, edit persistence,
@@ -93,7 +76,7 @@ possible cities in this fixture, a plain dropdown would have worked fine —
 this is sized for a city list that's actually long, which is a real
 over-build relative to what this dataset needs today.
 
-**Styling.** Tailwind v4 (`@tailwindcss/vite`) with hand-built components
+**Styling.** I used `Tailwind CSS` because during the interview I realized that knowing it was important and the company uses it. Tailwind v4 (`@tailwindcss/vite`) with hand-built components
 and a small custom token set (`index.css`: an `ink`/`accent` scale), no
 component library. Keeps every visual decision visible in this repo instead
 of inherited from a library's defaults, for a single screen small enough
@@ -104,36 +87,17 @@ Vite template's default `tsconfig.app.json`, stricter than the brief
 requires) — left on rather than relaxed.
 
 **What persists across reload.** Only the name edit, via IndexedDB. Search
-text, the active sort, the city filter, and the current page/page-size are
+text, the active sort, the city filter, pagination and the current page/page-size are
 local component state — they reset on reload, and (see "What is still wrong
 with this") also reset on any navigation away from the list. The brief only
 requires the name edit to survive; I didn't extend that to the rest of the
 view state, since nothing else says it should and URL-encoding all of it
 felt like solving a requirement that wasn't asked for.
 
-**Responsive & input testing.** Checked at 1280px (desktop) and 375px
-(mobile, iPhone SE/8-width) viewports — the toolbar stacks vertically below
-`sm`, and the table scrolls horizontally inside its own container rather
-than breaking the page layout, so the City column stays reachable instead
-of being dropped. Checked keyboard-only operation of the search input, the
-sortable column header, the city combobox (open, type to filter, Enter
-selects the first match, Escape/outside-click/blur-out closes it), and the
-row → detail → back flow — all reachable and operable via Tab/Enter/Escape
-without a mouse. The combobox's option list is Tab-reachable but doesn't
-support arrow-key roving between options; a full ARIA combobox pattern
-would add that. `color-scheme: light` is set explicitly so native form controls
-(the `<select>`, inputs) don't flip to an unreadable dark-on-dark combo
-under an OS-level dark mode, even though the rest of the UI only ships a
-light theme. `prefers-reduced-motion` is **not** currently honored — see
-"What is still wrong with this."
-
 ## Contradictions & gaps in the brief
 
 - **"Never fails" vs. "must handle failure."** The fixture can't produce a
-  failure to test against. Loading and error UI exist and were exercised by
-  hand (devtools offline toggle, throttled network) during development, not
-  by an automated fault-injection mechanism — I considered adding a
-  dev-only "fail N% of requests" env flag but didn't build it; see below.
+  failure to test against.
 - **"Only ten rows" vs. "handle far more rows."** Same root cause, different
   axis. Pagination is built and works correctly against the real ten rows,
   but its behavior at real scale (hundreds/thousands of rows) is reasoned
@@ -142,10 +106,7 @@ light theme. `prefers-reduced-motion` is **not** currently honored — see
   must not let a stale response overwrite a newer one" describes a race
   against a live search backend. This fixture returns all ten users once,
   with no query parameters, so search/sort/filter are pure client-side
-  array operations — there is no per-keystroke request to race. The
-  request-id/abort guard in `useUsers` is real and useful (it protects
-  retries and re-fetches), just not against the specific scenario the
-  wording implies.
+  array operations — there is no per-keystroke request to race.
 - **Back-button expectations vs. "no routing beyond this screen."** I read
   list↔detail as needing real routing (see Decisions), but the brief lists
   extra routing as explicitly out of scope in the same paragraph that
@@ -155,24 +116,14 @@ light theme. `prefers-reduced-motion` is **not** currently honored — see
 - **Scope of "nothing should disappear on reload" is undefined** beyond the
   name-edit requirement — see "What persists across reload" above for the
   line actually drawn.
-- **Edited name vs. "searchable/sortable by name."** Unresolved by the
-  brief which value — edited or original — those should operate on.
-  Resolved here as a consequence of merge order (edits are merged before
-  filtering/sorting run), not a separate decision.
-- **"A component library is fine" vs. "no design system," in the same
-  breath.** Most popular component libraries effectively *are* small design
-  systems (tokens + prebuilt components). Tailwind + hand-built components
-  sidesteps the ambiguity rather than resolving which side of that line a
-  library would fall on.
-- **A city filter with ten fixed, mostly-unique cities.** All ten fixture
-  users happen to live in ten different cities, so "filterable by city"
-  only ever narrows the list from ten rows to one (or zero) — it never
-  demonstrates filtering a real group. Confirmed by testing, not assumed.
+
+  ## Edited users versus fresh server data.
+
+This fixture API has no real write endpoint — there's nowhere for your edit to go except your own browser. That means an edited field can only exist because the user changed it right here, in this session or a past one. A subsequent fetch from the server is returning the same static, unedited fixture data every time — it was never "more current" than your edit, because it was never aware the edit happened at all. There's no real race between two sources of truth; there's one source of truth (your edit) and one source of stale placeholder data (the fixture) that has no way to reflect it.
 
 ## What is still wrong with this
 
-- **Filters, sort, page, and page-size reset on navigation, not just on
-  reload.** `UserList`'s search/sort/city/page/pageSize state is local to
+- **Filters, sort, page, pagination and page-size reset on navigation, not just on reload.** `UserList`'s search/sort/city/page/pagination/pageSize state is local to
   that component. Since it unmounts when routing to a detail view, clicking
   into a user and pressing Back returns to the *default* list view, not the
   filtered one you left — a real instance of "state that resets when it
@@ -184,41 +135,22 @@ light theme. `prefers-reduced-motion` is **not** currently honored — see
   the API fetch and re-reads IndexedDB every time. Invisible only because
   the fixture is instant; a real API would make this a visible, wasteful
   double-fetch.
-- **`prefers-reduced-motion` isn't respected.** The loading skeleton's
-  pulse animation runs regardless of the OS-level "reduce motion" setting.
-- **`hooks/useDebouncedValue.ts` is dead code** — a leftover from an
-  earlier version of the search implementation that debounced input before
-  it was simplified to plain client-side filtering. Unused, never imported.
-- **Two empty leftover directories, `src/context/` and `src/lib/`,** from
-  an earlier architectural pass (a context-provider version of the data
-  layer) that was later reverted in favor of the current flat structure.
-  Harmless, but repo clutter that should be deleted.
-- **No automated tests** — see Tests below.
+- **Create/update user and authentication/autorisation** The fixture API doesn't support the create and update endpoints, so I skipped those functionalities. Additionally, we don't have access to the logged-in user's information, so we can't determine who can and who performed the actions on the user table.
 
 ## What I would need before building this for real
 
 - A real write endpoint for edits, and its actual conflict-resolution
-  contract — is last-write-wins acceptable, or does a concurrent edit need
-  to be surfaced to the user instead of silently overwritten?
+  contract (is last-write-wins acceptable to the business, or does a
+  concurrent edit need to be surfaced to the user?).
 - Expected data volume in production, to know whether client-side
-  pagination is enough or the API needs real server-side search/pagination.
-- Whether a user record is ever edited by more than one person or session
-  concurrently — that changes the "local always wins" decision entirely.
-- Actual design/brand guidelines, if this is customer-facing rather than an
-  internal tool.
+  pagination/virtualization is enough or server-side pagination is required.
+- Whether "user" here is ever edited by more than one person/session
+  concurrently, which changes the local-wins decision entirely.
+- Actual design/brand guidelines (ex. Figma design), if this is customer-facing rather than
+  an internal tool.
 - Accessibility and browser-support requirements (specific WCAG level,
-  minimum supported browsers) — I assumed a reasonable modern-browser,
-  roughly WCAG-AA-effort bar in the absence of a stated one.
+  minimum supported browsers) — assumed a reasonable modern-browser,
+  WCAG AA-ish bar in the absence of one.
+- Implement authentification/autorisation functionality.
+- After having accurate backend endpoints, write tests and check all risky cases.
 
-## Tests
-
-Skipped deliberately, given the one-day scope — time went into the trickier
-runtime behavior instead (the race guard, edit/fetch merge order, the
-back-button/filter-reset interaction called out above) and into verifying
-it by hand: scripted headless-browser passes during development covering
-search/sort/city-filter/pagination/page-size, the detail-edit-reload-persist
-flow, keyboard-only operation, and layout at both a desktop and a 375px
-mobile width. None of that is committed as an automated suite. If I were to
-add tests, `hooks/useUsers.ts`'s merge/race logic and the filter+pagination
-interaction in `UserList.tsx` are where I'd start — they're the two places
-a regression would be easy to introduce silently.
