@@ -1,9 +1,8 @@
+import { USERS_API_URL } from '../constants'
 import type { ApiUser } from './types'
 
-const USERS_URL = 'https://jsonplaceholder.typicode.com/users'
-
 export async function fetchUsers(signal?: AbortSignal): Promise<ApiUser[]> {
-  const res = await fetch(USERS_URL, { signal })
+  const res = await fetch(USERS_API_URL, { signal })
 
   if (!res.ok) {
     throw new Error(`Server responded with ${res.status}`)

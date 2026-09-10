@@ -1,15 +1,14 @@
 import { useMemo, useState } from 'react'
 import { useUsers } from '../hooks/useUsers'
-import UserListItem from './UserListItem'
+import { USERS_DEFAULT_PAGE_SIZE } from '../constants'
+import UserTableRow from './UserTableRow'
+import UserTableHead, { type SortOrder } from './UserTableHead'
 import LoadingState from './LoadingState'
 import ErrorState from './ErrorState'
 import SearchBar from './SearchBar'
-import SortControl, { type SortOrder } from './SortControl'
 import CityFilter from './CityFilter'
 import Pagination from './Pagination'
-import UserListHeader from './UserListHeader'
-
-const PAGE_SIZE = 5
+import PageSizeSelect from './PageSizeSelect'
 
 export default function UserList() {
   const { users, status, error, retry } = useUsers()
@@ -17,6 +16,7 @@ export default function UserList() {
   const [sort, setSort] = useState<SortOrder>('name-asc')
   const [city, setCity] = useState('all')
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(USERS_DEFAULT_PAGE_SIZE)
 
   const cities = useMemo(() => {
     const set = new Set(users.map((u) => u.address.city))
@@ -35,35 +35,32 @@ export default function UserList() {
     )
   }, [users, search, city, sort])
 
-  // a new search/sort/city selection invalidates whatever page the user was on;
+  // a new search/sort/city/page-size selection invalidates whatever page the user was on;
   // reset during render (not an effect) so it takes effect in the same pass
-  const [appliedFilters, setAppliedFilters] = useState({ search, sort, city })
-  if (appliedFilters.search !== search || appliedFilters.sort !== sort || appliedFilters.city !== city) {
-    setAppliedFilters({ search, sort, city })
+  const [appliedFilters, setAppliedFilters] = useState({ search, sort, city, pageSize })
+  if (
+    appliedFilters.search !== search ||
+    appliedFilters.sort !== sort ||
+    appliedFilters.city !== city ||
+    appliedFilters.pageSize !== pageSize
+  ) {
+    setAppliedFilters({ search, sort, city, pageSize })
     setPage(1)
   }
 
-  const pageCount = Math.max(1, Math.ceil(visibleUsers.length / PAGE_SIZE))
+  const pageCount = Math.max(1, Math.ceil(visibleUsers.length / pageSize))
   const safePage = Math.min(page, pageCount)
-  const pageItems = visibleUsers.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+  const pageItems = visibleUsers.slice((safePage - 1) * pageSize, safePage * pageSize)
 
   return (
     <>
       <header className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight text-ink-900">Users</h1>
-        {status === 'success' && (
-          <p className="mt-1 text-sm text-ink-500">
-            {visibleUsers.length} of {users.length} users
-          </p>
-        )}
       </header>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
         <SearchBar value={search} onChange={setSearch} />
-        <div className="flex gap-3">
-          <SortControl value={sort} onChange={setSort} />
-          <CityFilter cities={cities} value={city} onChange={setCity} />
-        </div>
+        <CityFilter cities={cities} value={city} onChange={setCity} />
       </div>
 
       <div className="overflow-hidden rounded-lg border border-ink-300 bg-white">
@@ -74,13 +71,20 @@ export default function UserList() {
         )}
         {status === 'success' && visibleUsers.length > 0 && (
           <>
-            <UserListHeader />
-            <ul className="divide-y divide-ink-300">
-              {pageItems.map((user) => (
-                <UserListItem key={user.id} user={user} />
-              ))}
-            </ul>
-            <Pagination page={safePage} pageCount={pageCount} onChange={setPage} />
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <UserTableHead sort={sort} onSortChange={setSort} />
+                <tbody className="divide-y divide-ink-300">
+                  {pageItems.map((user) => (
+                    <UserTableRow key={user.id} user={user} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex flex-col gap-3 border-t border-ink-300 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <PageSizeSelect value={pageSize} onChange={setPageSize} />
+              <Pagination page={safePage} pageCount={pageCount} onChange={setPage} />
+            </div>
           </>
         )}
       </div>

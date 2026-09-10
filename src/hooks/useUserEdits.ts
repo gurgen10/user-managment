@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { EDITS_DB_NAME, EDITS_DB_VERSION, EDITS_STORE_NAME } from '../constants'
 
 export interface UserEdit {
   name: string
@@ -7,15 +8,11 @@ export interface UserEdit {
 
 type EditsMap = Record<number, UserEdit>
 
-const DB_NAME = 'user-management'
-const DB_VERSION = 1
-const STORE_NAME = 'user-edits'
-
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION)
+    const request = indexedDB.open(EDITS_DB_NAME, EDITS_DB_VERSION)
     request.onupgradeneeded = () => {
-      request.result.createObjectStore(STORE_NAME)
+      request.result.createObjectStore(EDITS_STORE_NAME)
     }
     request.onsuccess = () => resolve(request.result)
     request.onerror = () => reject(request.error)
@@ -26,7 +23,7 @@ async function readAllEdits(): Promise<EditsMap> {
   const db = await openDb()
   try {
     return await new Promise((resolve, reject) => {
-      const store = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME)
+      const store = db.transaction(EDITS_STORE_NAME, 'readonly').objectStore(EDITS_STORE_NAME)
       const result: EditsMap = {}
       const cursorRequest = store.openCursor()
       cursorRequest.onsuccess = () => {
@@ -49,8 +46,8 @@ async function writeEdit(id: number, edit: UserEdit): Promise<void> {
   const db = await openDb()
   try {
     await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, 'readwrite')
-      tx.objectStore(STORE_NAME).put(edit, id)
+      const tx = db.transaction(EDITS_STORE_NAME, 'readwrite')
+      tx.objectStore(EDITS_STORE_NAME).put(edit, id)
       tx.oncomplete = () => resolve()
       tx.onerror = () => reject(tx.error)
     })

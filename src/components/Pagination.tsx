@@ -5,13 +5,8 @@ interface PaginationProps {
 }
 
 export default function Pagination({ page, pageCount, onChange }: PaginationProps) {
-  if (pageCount <= 1) return null
-
   return (
-    <nav
-      aria-label="Pagination"
-      className="flex items-center justify-between border-t border-ink-300 px-4 py-3 text-sm"
-    >
+    <nav aria-label="Pagination" className="flex items-center gap-4 text-sm">
       <button
         type="button"
         onClick={() => onChange(page - 1)}
