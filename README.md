@@ -154,3 +154,38 @@ This fixture API has no real write endpoint — there's nowhere for your edit to
 - Implement authentification/autorisation functionality.
 - After having accurate backend endpoints, write tests and check all risky cases.
 
+## Tests
+
+```bash
+npm run test   # vitest run
+```
+
+Deliberately narrow: unit tests only for the logic where a regression would
+be easy to introduce silently and hard to notice by eye, not for rendering
+or interaction, which was instead verified by hand with scripted
+headless-browser passes during development (search/sort/city-filter/
+pagination/page-size, the detail-edit-reload-persist flow, keyboard-only
+operation, and layout at a desktop and a 375px width). A full
+render-and-click component-test suite felt like exactly the "renders a
+component and asserts nothing much" pattern the brief warns against, so I
+didn't add one.
+
+- **`hooks/useUsers.test.ts`** — `mergeUser` (the local-edit-always-wins
+  rule), plus the actual stale-response race guard: a slow first fetch and
+  a fast retry are both mocked, the retry resolves first, and the test
+  asserts that when the slow one *finally* resolves afterward, it does not
+  overwrite the already-applied newer state. Also covers the fetch-rejects
+  → error-state path.
+- **`hooks/useUserEdits.test.ts`** — IndexedDB round-trip using
+  `fake-indexeddb`: an edit written by one hook instance is read back by a
+  second, fresh instance, which is what "survives a reload" actually
+  reduces to at the code level.
+- **`components/userListQuery.test.ts`** — the filter/sort/paginate logic
+  extracted out of `UserList.tsx` into `userListQuery.ts` specifically so
+  it could be unit-tested without rendering React: name/email substring
+  matching, that city is intentionally excluded from the search match, the
+  city filter, search+city as AND, both sort directions, and pagination's
+  edge cases (a page number beyond the last page clamps back, an empty
+  list still reports one page, a page size larger than the list still
+  works).
+

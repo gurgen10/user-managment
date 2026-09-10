@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useUsers } from '../hooks/useUsers'
 import { USERS_DEFAULT_PAGE_SIZE } from '../constants'
+import { filterAndSortUsers, paginate } from './userListQuery'
 import UserTableRow from './UserTableRow'
 import UserTableHead, { type SortOrder } from './UserTableHead'
 import LoadingState from './LoadingState'
@@ -23,17 +24,10 @@ export default function UserList() {
     return Array.from(set).sort((a, b) => a.localeCompare(b))
   }, [users])
 
-  const visibleUsers = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    const filtered = users.filter((u) => {
-      const matchesQuery = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
-      const matchesCity = city === 'all' || u.address.city === city
-      return matchesQuery && matchesCity
-    })
-    return [...filtered].sort((a, b) =>
-      sort === 'name-asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name),
-    )
-  }, [users, search, city, sort])
+  const visibleUsers = useMemo(
+    () => filterAndSortUsers(users, { search, city, sort }),
+    [users, search, city, sort],
+  )
 
   // a new search/sort/city/page-size selection invalidates whatever page the user was on;
   // reset during render (not an effect) so it takes effect in the same pass
@@ -48,9 +42,7 @@ export default function UserList() {
     setPage(1)
   }
 
-  const pageCount = Math.max(1, Math.ceil(visibleUsers.length / pageSize))
-  const safePage = Math.min(page, pageCount)
-  const pageItems = visibleUsers.slice((safePage - 1) * pageSize, safePage * pageSize)
+  const { pageItems, pageCount, safePage } = paginate(visibleUsers, page, pageSize)
 
   return (
     <>

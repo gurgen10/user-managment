@@ -18,7 +18,7 @@ const initialState: FetchState = { status: 'loading', apiUsers: [], error: null 
  * Local edits always win over server data - a user who renamed themselves
  * shouldn't see it silently reverted by the next successful fetch.
  */
-function mergeUser(apiUser: ApiUser, edit: UserEdit | undefined): User {
+export function mergeUser(apiUser: ApiUser, edit: UserEdit | undefined): User {
   if (!edit) return apiUser
   return { ...apiUser, name: edit.name, nameEditedAt: edit.editedAt }
 }
