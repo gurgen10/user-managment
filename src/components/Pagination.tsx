@@ -11,7 +11,7 @@ export default function Pagination({ page, pageCount, onChange }: PaginationProp
         type="button"
         onClick={() => onChange(page - 1)}
         disabled={page <= 1}
-        className="cursor-pointer rounded-md px-3 py-1.5 font-medium text-ink-700 hover:bg-ink-100 disabled:cursor-not-allowed disabled:opacity-40"
+        className="cursor-pointer rounded-md border border-ink-300 bg-white px-3 py-1.5 font-medium text-ink-700 hover:bg-ink-100 disabled:cursor-not-allowed disabled:opacity-40"
       >
         Previous
       </button>
@@ -22,7 +22,7 @@ export default function Pagination({ page, pageCount, onChange }: PaginationProp
         type="button"
         onClick={() => onChange(page + 1)}
         disabled={page >= pageCount}
-        className="cursor-pointer rounded-md px-3 py-1.5 font-medium text-ink-700 hover:bg-ink-100 disabled:cursor-not-allowed disabled:opacity-40"
+        className="cursor-pointer rounded-md border border-ink-300 bg-white px-3 py-1.5 font-medium text-ink-700 hover:bg-ink-100 disabled:cursor-not-allowed disabled:opacity-40"
       >
         Next
       </button>
